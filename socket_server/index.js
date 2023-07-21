@@ -98,26 +98,40 @@ const wss = new WebSocket.Server({server});
 wss.on('connection', function connection(ws) {
     console.log('A client connected');
   
-    ws.on('message', function incoming(message) {
+    ws.on('message', async function incoming(message) {
 
       const json_message = JSON.parse(message);
 
+      const total_plays = await Result.countDocuments({ seed: json_message.seed });
+      const wins = await Result.countDocuments({ seed: json_message.seed, is_profit_lost : true });
+
+      const is_profit_lost = parseFloat( json_message.payout ) < parseFloat( json_message.result ) ? true : false;
+
+      const now = new Date();
+
       const result = new Result({
-        bet_amount: json_message.amount,
-        bet_payout: json_message.payout,
-        bet_result: json_message.result,
-        is_profit_lost: parseFloat( json_message.payout ) < parseFloat( json_message.result ) ? true : false,
-        created_at: Date.now(),
+        seed: json_message.seed,
+        total_plays: total_plays + 1,
+        wins: is_profit_lost ? wins + 1 : wins,
+        dead_counts: is_profit_lost ? total_plays - wins : total_plays - wins + 1,
+        bet_amount: parseFloat( json_message.amount ),
+        bet_payout: parseFloat( json_message.payout ),
+        bet_result: parseFloat( json_message.result ),
+        is_profit_lost: is_profit_lost,
+        created_at: now.toLocaleString(),
       });
       
       result.save()
         .then((doc) => {
-          console.log(`=====================================
-          Amount : ${ json_message.amount },
-          Payout : ${ json_message.payout },
-          Result : ${ json_message.result },
-          State  : ${ parseFloat( json_message.payout ) < parseFloat( json_message.result ) ? 'Profit' : 'Lose'}
-          `)
+          // console.log(`=====================================
+          // Amount : ${ json_message.amount },
+          // Payout : ${ json_message.payout },
+          // Result : ${ json_message.result },
+          // State  : ${ parseFloat( json_message.payout ) < parseFloat( json_message.result ) ? 'Profit' : 'Lose'}
+          // `)
+
+          console.log( doc );
+
         })
         .catch((err) => {
           console.error('Error saving document:', err);

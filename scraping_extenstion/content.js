@@ -4,6 +4,8 @@ let socket = null;
 let flag = false;
 let count = 1;
 
+let seed = '';
+
 function main(event) {
     console.log('LIMBO STARTED');
 
@@ -20,6 +22,16 @@ function main(event) {
             console.log('Connected to server');
         });
 
+    }
+
+    function generateSeed(length) {
+        let result = '';
+        const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+        const charactersLength = characters.length;
+        for (let i = 0; i < length; i++) {
+          result += characters.charAt(Math.floor(Math.random() * charactersLength));
+        }
+        return result;
     }
 
     async function decreaseAction( element ){
@@ -40,7 +52,8 @@ function main(event) {
                 JSON.stringify({
                     'amount' : inputFields[0].value,
                     'payout' : inputFields[1].value,
-                    'result' : betResult.textContent
+                    'result' : betResult.textContent,
+                    'seed' : seed
                 }
             ))
         } else {
@@ -80,6 +93,9 @@ function main(event) {
     initializeSocket();
 
     if ( isFirst ) {
+
+        seed = generateSeed( 24 );
+
         setTimeout(function() {
             startBet();
         }, 15000);
