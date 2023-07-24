@@ -102,40 +102,91 @@ wss.on('connection', function connection(ws) {
 
       const json_message = JSON.parse(message);
 
-      const total_plays = await Result.countDocuments({ seed: json_message.seed });
-      const wins = await Result.countDocuments({ seed: json_message.seed, is_profit_lost : true });
+      // const total_plays = await Result.countDocuments({ seed: json_message.seed });
+      // const wins = await Result.countDocuments({ seed: json_message.seed, is_profit_lost : true });
 
       const is_profit_lost = parseFloat( json_message.payout ) < parseFloat( json_message.result ) ? true : false;
 
       const now = new Date();
 
-      const result = new Result({
-        seed: json_message.seed,
-        total_plays: total_plays + 1,
-        wins: is_profit_lost ? wins + 1 : wins,
-        dead_counts: is_profit_lost ? total_plays - wins : total_plays - wins + 1,
-        bet_amount: parseFloat( json_message.amount ),
-        bet_payout: parseFloat( json_message.payout ),
-        bet_result: parseFloat( json_message.result ),
-        is_profit_lost: is_profit_lost,
-        created_at: now.toLocaleString(),
-      });
-      
-      result.save()
+      Result.findOne({ seed: json_message.seed }, {}, { sort: { '_id' : -1 }})
         .then((doc) => {
-          // console.log(`=====================================
-          // Amount : ${ json_message.amount },
-          // Payout : ${ json_message.payout },
-          // Result : ${ json_message.result },
-          // State  : ${ parseFloat( json_message.payout ) < parseFloat( json_message.result ) ? 'Profit' : 'Lose'}
-          // `)
+          if ( doc === null ){
+            const result = new Result({
+              seed: json_message.seed,
+              total_plays: 1,
+              wins: is_profit_lost ? 1 : 0,
+              dead_counts: is_profit_lost ? 0 : 1,
+              bet_amount: parseFloat( json_message.amount ),
+              bet_payout: parseFloat( json_message.payout ),
+              bet_result: parseFloat( json_message.result ),
+              is_profit_lost: is_profit_lost,
+              created_at: now.toLocaleString(),
+            });
+            
+            result.save()
+              .then((doc) => {
+                // console.log(`=====================================
+                // Amount : ${ json_message.amount },
+                // Payout : ${ json_message.payout },
+                // Result : ${ json_message.result },
+                // State  : ${ parseFloat( json_message.payout ) < parseFloat( json_message.result ) ? 'Profit' : 'Lose'}
+                // `)
 
-          console.log( doc );
+                console.log( doc );
 
+              })
+              .catch((err) => {
+                console.error('Error saving document:', err);
+              });
+          }
+          else {
+            const result = new Result({
+              seed: json_message.seed,
+              total_plays: doc.total_plays + 1,
+              wins: is_profit_lost ? doc.wins + 1 : doc.wins,
+              dead_counts: is_profit_lost ? 0 :  doc.dead_counts + 1 ,
+              bet_amount: parseFloat( json_message.amount ),
+              bet_payout: parseFloat( json_message.payout ),
+              bet_result: parseFloat( json_message.result ),
+              is_profit_lost: is_profit_lost,
+              created_at: now.toLocaleString(),
+            });
+
+            result.save()
+              .then((doc) => {
+                // console.log(`=====================================
+                // Amount : ${ json_message.amount },
+                // Payout : ${ json_message.payout },
+                // Result : ${ json_message.result },
+                // State  : ${ parseFloat( json_message.payout ) < parseFloat( json_message.result ) ? 'Profit' : 'Lose'}
+                // `)
+
+                console.log( doc );
+
+              })
+              .catch((err) => {
+                console.error('Error saving document:', err);
+              });
+
+          }
         })
         .catch((err) => {
-          console.error('Error saving document:', err);
-        });
+          console.log('HHHH');
+        })
+
+      // const result = new Result({
+      //   seed: json_message.seed,
+      //   total_plays: total_plays + 1,
+      //   wins: is_profit_lost ? wins + 1 : wins,
+      //   dead_counts: is_profit_lost ? 0 :  lastDocument.dead_counts + 1 ,
+      //   bet_amount: parseFloat( json_message.amount ),
+      //   bet_payout: parseFloat( json_message.payout ),
+      //   bet_result: parseFloat( json_message.result ),
+      //   is_profit_lost: is_profit_lost,
+      //   created_at: now.toLocaleString(),
+      // });
+      
       ws.send('Hello from server!');
     });
   
